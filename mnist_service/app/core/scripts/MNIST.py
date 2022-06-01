@@ -2,10 +2,12 @@ from sklearn.datasets import load_digits
 from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision.transforms import Compose, ToTensor, Normalize
 from torch import no_grad
+from flask import current_app
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import mlflow
+import joblib
+import os
 
 
 class MNISTModel(nn.Module):
@@ -29,7 +31,7 @@ class MNISTModel(nn.Module):
 class MNISTRetrain(object):
   class CustomDataset(Dataset):
     def __init__(self, transform=None):
-      data = extract_data()
+      data = self.extract_data()
       self._images = data.images
       self._target = data.target
       self.transform = transform
@@ -55,7 +57,6 @@ class MNISTRetrain(object):
     self._test_loader = DataLoader(self._test_dataset, shuffle=True)
     self._model = MNISTModel()
     self._optimizer = optim.SGD(self._model.parameters(), lr=0.01)
-    mlflow.set_experiment(experiment_name='MNIST')
       
   def _train_test_split(self, dataset):
     return random_split(dataset, [1300, 497])
@@ -66,12 +67,16 @@ class MNISTRetrain(object):
     preparation_pipeline.append(Normalize((0.1307,), (0.3081,)))
     return Compose(preparation_pipeline)
 
-  def train_test(self, run_name, n_epochs=5):
-    with mlflow.start_run(run_name=run_name):
-      for epoch in range(n_epochs):
-        self._train()
-      self._test()
-      mlflow.pytorch.log_model(self._model, "model")
+  def train_test(self, name, n_epochs=5):
+    for epoch in range(n_epochs):
+      self._train()
+    self._test()
+    self.save_model(name)
+
+  def save_model(self, name):
+    model_path = os.path.join('files', f"MNISTmodels-{name}.sav")
+    print(model_path, flush=True)
+    joblib.dump(self._model, model_path)
 
   def _train(self):
     self._model.train()
@@ -95,5 +100,3 @@ class MNISTRetrain(object):
 
     test_loss /= len(self._test_loader.dataset)
     accuracy = float(100 * correct / len(self._test_loader.dataset))
-    mlflow.log_metric(key="Loss", value=test_loss)
-    mlflow.log_metric(key="Accuracy", value=accuracy)
