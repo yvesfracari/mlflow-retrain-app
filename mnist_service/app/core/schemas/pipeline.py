@@ -6,9 +6,8 @@ class PipelineSchema(ma.Schema):
         fields = (
             "id",
             "name",
-            "active",
             "created_at",
-            "random_seed",
+            "active",
         )
         model = Pipeline
 
