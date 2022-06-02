@@ -5,7 +5,7 @@ from flask_restx import Namespace, Resource, fields
 from ..models.pipeline import Pipeline
 from ..models.version import Version
 from ..schemas.pipeline import pipeline_schema, pipelines_schema
-from ..scripts.MNIST import MNISTRetrain
+from ..scripts.MNIST import MNISTTrain
 
 
 api = Namespace('pipeline', description="Pipeline related operations.")
@@ -48,7 +48,8 @@ class PipelineBasic(Resource):
                         "random_seed": input_data["random_seed"],
                         "pipeline_id": new_pipeline.id,
                         "active": True}
-        retrain = MNISTRetrain(random_seed=version_dict["random_seed"])
+
+        train = MNISTTrain(random_seed=version_dict["random_seed"])
         results = retrain.train_test()
         name = input_data["name"]
         version_number = version_dict["version_number"]
@@ -100,8 +101,9 @@ class PipelineActivation(Resource):
     def post(self):
         """Update the active pipeliner"""
         old_active_pipe = Pipeline.query.filter_by(active=True).first()
-        old_active_pipe.active = False
-        old_active_pipe.save()
+        if old_active_pipe:
+            old_active_pipe.active = False
+            old_active_pipe.save()
 
         new_active_pipe = Pipeline.query.filter_by(name=json.loads(request.data)["name"]).first()
         new_active_pipe.active = True

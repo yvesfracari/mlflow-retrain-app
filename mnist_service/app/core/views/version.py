@@ -1,9 +1,12 @@
 import json
+import os
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from ..models.version import Version
 from ..models.pipeline import Pipeline
 from ..schemas.version import version_schema, versions_schema
+from ..scripts.MNIST import MNISTTrain
+
 
 api = Namespace('version', description="Version related operations.")
 
@@ -19,6 +22,11 @@ version = api.model('Version', {
     'loss': fields.Float(description="The last loss calculated on the train data"),
 })
 
+version_creation = api.model('Version creation', {
+    'pipeline_name': fields.String(description="The pipeline name"),
+    'random_seed': fields.Integer(description="The first version random seed."),
+})
+
 version_activation = api.model('Version activation', {
     'pipeline_name': fields.String(description="The pipeline name to change the version"),
     'version_number': fields.Integer(description="The version number to activate")
@@ -32,14 +40,29 @@ class VersionBasic(Resource):
         """List all the versions"""
         versions = Version.query.all()
         return versions_schema.dump(versions)
-    
-    @api.doc("Create a new version")
-    @api.expect(version)
+
+    @api.doc("Create a new version of a pipeline retraining the latest version")
+    @api.expect(version_creation)
     @api.marshal_with(version, code=201)
     def post(self):
-        """Create a new version"""
+        """Create a new version of a pipeline retraining the latest version"""
         input_data = json.loads(request.data)
-        new_version = Version(**input_data)
+        pipeline_id = Pipeline.query.filter_by(name=input_data["pipeline_name"]).first().id
+        old_version = Version.find_by_id(pipeline_id)
+        new_version_number = old_version.version_number+1
+        new_version_dict = {"version_number": new_version_number, 
+                        "random_seed": input_data["random_seed"],
+                        "pipeline_id": pipeline_id,
+                        "active": False}
+
+        retrain = MNISTTrain(random_seed=new_version_dict["random_seed"])
+        retrain.load_model(old_version.path)
+        results = retrain.train_test()
+        name = input_data["pipeline_name"]
+        path = os.path.join('/files', f"{name}-{new_version_number}.sav")
+        retrain.save_model(path)
+        new_version_dict = {**new_version_dict, **results, 'path':path}
+        new_version = Version(**new_version_dict)
         new_version.save()
         return version_schema.dump(new_version)
 

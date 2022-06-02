@@ -28,7 +28,7 @@ class MNISTModel(nn.Module):
     x = self.fc2(x)
     return F.log_softmax(x)
 
-class MNISTRetrain(object):
+class MNISTTrain(object):
   class CustomDataset(Dataset):
     def __init__(self, transform=None):
       data = self.extract_data()
@@ -75,6 +75,11 @@ class MNISTRetrain(object):
 
   def save_model(self, model_path):
     joblib.dump(self._model, model_path)
+  
+  def load_model(self, model_path):
+    model = joblib.load(model_path)
+    self._model = model
+    return model
 
   def _train(self):
     self._model.train()
