@@ -9,7 +9,7 @@ class Version(BaseModel):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     path = db.Column(db.Text, nullable=False)
     active = db.Column(db.Boolean, nullable=False)
-    random_seed = db.Column(db.Integer, nullable=False)
+    random_seed = db.Column(db.Integer, default=0)
     loss = db.Column(db.Float, nullable=False)
     accuracy = db.Column(db.Float, nullable=False)
 

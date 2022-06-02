@@ -1,10 +1,9 @@
 from flask import Blueprint
 from flask_restx import Api
 from .hello_world import api as hello_word
-from .model import api as model
-from .result import api as result
-from .step import api as step
+from .model2 import api as model
 from .pipeline import api as pipeline
+from .version import api as version
 
 bp = Blueprint('api', __name__,)
 api = Api(bp, api_version="0.1", title="ML Microservice Example Server API",
@@ -13,5 +12,4 @@ api = Api(bp, api_version="0.1", title="ML Microservice Example Server API",
 api.add_namespace(hello_word)
 api.add_namespace(model)
 api.add_namespace(pipeline)
-api.add_namespace(step)
-api.add_namespace(result)
+api.add_namespace(version)

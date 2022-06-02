@@ -1,7 +1,7 @@
 from sklearn.datasets import load_digits
 from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision.transforms import Compose, ToTensor, Normalize
-from torch import no_grad
+from torch import no_grad, Generator
 from flask import current_app
 import torch.nn as nn
 import torch.nn.functional as F
@@ -50,16 +50,16 @@ class MNISTRetrain(object):
     def __len__(self):
       return self._target.shape[0]
 
-  def __init__(self):
+  def __init__(self, random_seed=0):
     self._dataset = self.CustomDataset(transform=self._preparation())
-    self._train_dataset, self._test_dataset = self._train_test_split(self._dataset)
+    self._train_dataset, self._test_dataset = self._train_test_split(self._dataset, random_seed=random_seed)
     self._train_loader = DataLoader(self._train_dataset, shuffle=True)
     self._test_loader = DataLoader(self._test_dataset, shuffle=True)
     self._model = MNISTModel()
     self._optimizer = optim.SGD(self._model.parameters(), lr=0.01)
-      
-  def _train_test_split(self, dataset):
-    return random_split(dataset, [1300, 497])
+
+  def _train_test_split(self, dataset, random_seed=0):
+    return random_split(dataset, [1300, 497], generator=Generator().manual_seed(random_seed))
 
   def _preparation(self):
     preparation_pipeline = list()
@@ -67,15 +67,13 @@ class MNISTRetrain(object):
     preparation_pipeline.append(Normalize((0.1307,), (0.3081,)))
     return Compose(preparation_pipeline)
 
-  def train_test(self, name, n_epochs=5):
-    for epoch in range(n_epochs):
+  def train_test(self):
+    for epoch in range(5):
       self._train()
-    self._test()
-    self.save_model(name)
+    results = self._test()
+    return results
 
-  def save_model(self, name):
-    model_path = os.path.join('files', f"MNISTmodels-{name}.sav")
-    print(model_path, flush=True)
+  def save_model(self, model_path):
     joblib.dump(self._model, model_path)
 
   def _train(self):
@@ -98,5 +96,8 @@ class MNISTRetrain(object):
         pred = output.data.max(1, keepdim=True)[1]
         correct += pred.eq(target.data.view_as(pred)).sum()
 
+    results = dict()
     test_loss /= len(self._test_loader.dataset)
-    accuracy = float(100 * correct / len(self._test_loader.dataset))
+    results['loss'] = test_loss
+    results['accuracy'] = float(100 * correct / len(self._test_loader.dataset))
+    return results
