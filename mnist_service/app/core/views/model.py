@@ -1,9 +1,9 @@
 import os
 import json
-import mlflow
 import joblib
 import numpy as np
 import torch
+from torchvision.transforms import Normalize
 from flask import current_app, jsonify, request
 from flask_restx import Namespace, Resource, fields
 from ..models.pipeline import Pipeline
@@ -34,6 +34,7 @@ class MNISTSModel(Resource):
     version_path = Version.query.filter_by(pipeline_id=pipeline_id, active=True).first().path
     model = joblib.load(version_path)
     output_data = dict()
-    output_data['probs'] = model(images).tolist()
+    scaler = Normalize((0.1307,), (0.3081,))
+    output_data['probs'] = model(scaler(images)).tolist()
     output_data['digit'] = [prob.index(max(prob)) for prob in output_data['probs']]
     return [dict(zip(output_data,t)) for t in zip(*output_data.values())]

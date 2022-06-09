@@ -30,13 +30,12 @@ class MNISTModel(nn.Module):
 
 class MNISTTrain(object):
   class CustomDataset(Dataset):
-    def __init__(self, transform=None):
+    def __init__(self, transform):
       data = self.extract_data()
       self._images = data.images
       self._target = data.target
-      self.transform = transform
+      self._transform = transform
 
-    @staticmethod
     def extract_data():
       return load_digits()
 
@@ -44,7 +43,7 @@ class MNISTTrain(object):
       images = self._images[idx]
       targets = self._target[idx]
       if self.transform:
-        images = self.transform(images)      
+        images = self._transform(images)      
       return images, targets
 
     def __len__(self):
@@ -61,7 +60,8 @@ class MNISTTrain(object):
   def _train_test_split(self, dataset, random_seed=0):
     return random_split(dataset, [1300, 497], generator=Generator().manual_seed(random_seed))
 
-  def _preparation(self):
+  @staticmethod
+  def _preparation():
     preparation_pipeline = list()
     preparation_pipeline.append(ToTensor())
     preparation_pipeline.append(Normalize((0.1307,), (0.3081,)))
